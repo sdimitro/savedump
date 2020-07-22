@@ -11,7 +11,7 @@ setup(
     ],
 
     entry_points={
-        'console_scripts': ['savedump=savedump.prog:main'],
+        'console_scripts': ['savedump=savedump.savedump:main'],
     },
 
     author='Delphix Platform Team',

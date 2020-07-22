@@ -30,8 +30,6 @@ import subprocess
 import sys
 from typing import List, Optional, Tuple
 
-import kdumpfile
-
 
 def shell_cmd(cmd_and_args: List[str]) -> Tuple[bool, str]:
     """
@@ -116,11 +114,38 @@ def get_dump_type(path: str) -> Optional[DumpType]:
     return None
 
 
+RUN_CRASH_SDB_CONTENTS = """#!/bin/bash
+
+script_path=$(readlink -f "$0")
+script_dir=$(dirname "$script_path")
+
+sdb -s $script_dir/usr/lib/debug/lib/modules \\
+    $script_dir/{0} $script_dir/{1}
+"""
+
+RUN_PYCRASH_CONTENTS = """#!/bin/bash
+
+script_path=$(readlink -f "$0")
+script_dir=$(dirname "$script_path")
+
+crash.sh -m $script_dir/usr/lib/debug/lib/modules \\
+    $script_dir/{0} $script_dir/{1}
+"""
+
+
 def archive_kernel_dump(path: str) -> None:
     """
     Packages the dump together with its vmlinux and modules in a
     gzipped archive in the working directory.
     """
+    #
+    # We import libkdumpfile specifically here and not
+    # in the top-level to allow users that don't have
+    # it installed to still be able to use savedump for
+    # core files.
+    #
+    import kdumpfile  # pylint: disable=import-outside-toplevel
+
     kdump_info = kdumpfile.kdumpfile(path)
     dumpname = os.path.basename(path)
     nodename = kdump_info.attr['linux.uts.nodename']
@@ -143,6 +168,26 @@ def archive_kernel_dump(path: str) -> None:
 
     archive_extra_mod_path = f"{archive_dir}{extra_mod_path}"
     distutils.dir_util.copy_tree(extra_mod_path, archive_extra_mod_path)
+
+    #
+    # Generate run-sdb.sh.
+    #
+    run_sdb_path = f"{archive_dir}/run-sdb.sh"
+    with open(run_sdb_path, "w") as sdb_script:
+        print(RUN_CRASH_SDB_CONTENTS.format(os.path.basename(vmlinux_path),
+                                            dumpname),
+              file=sdb_script)
+    os.chmod(run_sdb_path, 0o755)
+
+    #
+    # Generate run-pycrash.sh.
+    #
+    run_pycrash_path = f"{archive_dir}/run-pycrash.sh"
+    with open(run_pycrash_path, "w") as pycrash_script:
+        print(RUN_PYCRASH_CONTENTS.format(os.path.basename(vmlinux_path),
+                                          dumpname),
+              file=pycrash_script)
+    os.chmod(run_pycrash_path, 0o755)
 
     msg = compress_archive(archive_dir)
     shutil.rmtree(archive_dir)
@@ -245,8 +290,39 @@ def get_libraries_through_ldd(bin_path: str) -> Optional[List[str]]:
         print(output, file=sys.stderr)
         return None
 
-    sys.exit("error: library detection through ldd(1) not implemented yet")
-    return []
+    #
+    # Example output of the above command:
+    # ```
+    #    $ ldd /sbin/ztest
+    #       linux-vdso.so.1 (0x00007ffeeb9ac000)
+    #       libnvpair.so.1 => /lib/libnvpair.so.1 (0x00007f607a568000)
+    #       libzpool.so.2 => /lib/libzpool.so.2 (0x00007f6079f3c000)
+    #       libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f6079b9e000)
+    #       libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f607997f000)
+    #       libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f607958e000)
+    #       librt.so.1 => /lib/x86_64-linux-gnu/librt.so.1 (0x00007f6079386000)
+    #       libblkid.so.1 => /lib/x86_64-linux-gnu/libblkid.so.1 (0x00007f6079139000)
+    #       libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f6078f35000)
+    #       libudev.so.1 => /lib/x86_64-linux-gnu/libudev.so.1 (0x00007f6078d17000)
+    #       libuuid.so.1 => /lib/x86_64-linux-gnu/libuuid.so.1 (0x00007f6078b10000)
+    #       libz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007f60788f3000)
+    #       /lib64/ld-linux-x86-64.so.2 (0x00007f607a9a2000)
+    # ```
+    #
+    libraries = []
+    for line in output.splitlines():
+        line = line.strip()
+        if '=>' in line:
+            libraries.append(line.split()[2])
+        elif 'ld-linux-' in line:
+            #
+            # Outside of ouf userland-linked libraries that are not part of
+            # the runtime of the OS, we only care about the dynamic linker
+            # used (e.g. ld-linux-x86-64.so.2) and even that is mostly there
+            # for extreme situations.
+            #
+            libraries.append(line.split()[0])
+    return libraries
 
 
 def binary_includes_debug_info(path: str) -> Optional[bool]:
