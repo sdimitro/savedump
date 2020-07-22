@@ -116,6 +116,25 @@ def get_dump_type(path: str) -> Optional[DumpType]:
     return None
 
 
+RUN_CRASH_SDB_CONTENTS = """#!/bin/bash
+
+script_path=$(readlink -f "$0")
+script_dir=$(dirname "$script_path")
+
+sdb -s $script_dir/usr/lib/debug/lib/modules \\
+    $script_dir/{0} $script_dir/{1}
+"""
+
+RUN_PYCRASH_CONTENTS = """#!/bin/bash
+
+script_path=$(readlink -f "$0")
+script_dir=$(dirname "$script_path")
+
+crash.sh -m $script_dir/usr/lib/debug/lib/modules \\
+    $script_dir/{0} $script_dir/{1}
+"""
+
+
 def archive_kernel_dump(path: str) -> None:
     """
     Packages the dump together with its vmlinux and modules in a
@@ -143,6 +162,26 @@ def archive_kernel_dump(path: str) -> None:
 
     archive_extra_mod_path = f"{archive_dir}{extra_mod_path}"
     distutils.dir_util.copy_tree(extra_mod_path, archive_extra_mod_path)
+
+    #
+    # Generate run-sdb.sh.
+    #
+    run_sdb_path = f"{archive_dir}/run-sdb.sh"
+    with open(run_sdb_path, "w") as sdb_script:
+        print(RUN_CRASH_SDB_CONTENTS.format(os.path.basename(vmlinux_path),
+                                            dumpname),
+              file=sdb_script)
+    os.chmod(run_sdb_path, 0o755)
+
+    #
+    # Generate run-pycrash.sh.
+    #
+    run_pycrash_path = f"{archive_dir}/run-pycrash.sh"
+    with open(run_pycrash_path, "w") as pycrash_script:
+        print(RUN_PYCRASH_CONTENTS.format(os.path.basename(vmlinux_path),
+                                          dumpname),
+              file=pycrash_script)
+    os.chmod(run_pycrash_path, 0o755)
 
     msg = compress_archive(archive_dir)
     shutil.rmtree(archive_dir)
