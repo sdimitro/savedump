@@ -1,0 +1,18 @@
+Source: savedump
+Section: misc
+Priority: optional
+Maintainer: Delphix Engineering <eng@delphix.com>
+Standards-Version: 4.1.2
+Build-Depends: debhelper (>= 9),
+               dh-python,
+               libkdumpfile,
+               python3,
+               python3-distutils,
+               python3.6-dev,
+               zlib1g-dev
+Suggests: drgn
+
+Package: savedump
+Architecture: any
+Depends: ${shlibs:Depends}, ${python3:Depends}
+Description: Kernel coredump file access
