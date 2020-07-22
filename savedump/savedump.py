@@ -30,8 +30,6 @@ import subprocess
 import sys
 from typing import List, Optional, Tuple
 
-import kdumpfile
-
 
 def shell_cmd(cmd_and_args: List[str]) -> Tuple[bool, str]:
     """
@@ -140,6 +138,14 @@ def archive_kernel_dump(path: str) -> None:
     Packages the dump together with its vmlinux and modules in a
     gzipped archive in the working directory.
     """
+    #
+    # We import libkdumpfile specifically here and not
+    # in the top-level to allow users that don't have
+    # it installed to still be able to use savedump for
+    # core files.
+    #
+    import kdumpfile  # pylint: disable=import-outside-toplevel
+
     kdump_info = kdumpfile.kdumpfile(path)
     dumpname = os.path.basename(path)
     nodename = kdump_info.attr['linux.uts.nodename']
