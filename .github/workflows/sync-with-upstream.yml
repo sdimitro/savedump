@@ -1,0 +1,16 @@
+on:
+  schedule:
+    - cron:  '0 * * * *'
+
+jobs:
+  sync:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: delphix/actions/sync-with-upstream@master
+        with:
+          upstream-repository: https://github.com/sdimitro/savedump.git
+          upstream-branch: test-upstream
+          downstream-branch: test-downstream
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
