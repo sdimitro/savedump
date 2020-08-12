@@ -1,9 +1,5 @@
 # savedump
 
-TL;DR; A Python hack I put together that does its best to archive
-crash dumps and core dumps together with their required binaries
-and debug info in Linux.
-
 ### Motivation
 
 In illumos crash dumps (think kernel state dumps) and cores dumps
