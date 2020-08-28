@@ -1,8 +1,12 @@
 # savedump
 
-TL;DR; A Python hack I put together that does its best to archive
-crash dumps and core dumps together with their required binaries
-and debug info in Linux.
+![](https://github.com/sdimitro/savedump/workflows/.github/workflows/main.yml/badge.svg)
+
+TL;DR; A Python script that creates a best-effort self-contained
+archive of a kernel crash dump or userland core dump. The archive
+contains the memory dump coupled together with any required
+binaries and debug information that it could find at the time it
+was invoked.
 
 ### Motivation
 
