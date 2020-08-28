@@ -39,6 +39,26 @@ dumps. What it does lack though is proper tooling to capture a
 self-contained dump from one system to analyze it in another.
 This is what this utility is attempting to help with.
 
+### Installation
+
+Ensure you have the following dependencies:
+* Python 3.6 or newer
+* [libkdumpfile](https://github.com/ptesarik/libkdumpfile)
+* [drgn](https://github.com/osandov/drgn/)
+* [gdb](https://www.gnu.org/software/gdb/)
+
+Note that `libkdumpfile` and `drgn` are only needed for kernel
+crash dumps. If you only need `savedump` for userland core dumps
+then you only need `python3`. `gdb` is not a hard dependency
+either but it is recommeneded for accurate archival of shared
+objects in userland core dumps.
+
+Once all dependencies are installed clone this repo and
+run the following command from the root of the repo:
+```
+sudo python3 setup.py install
+```
+
 ### How do I use it?
 
 To capture a crash dump or a core dump:
