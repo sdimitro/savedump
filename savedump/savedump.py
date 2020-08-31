@@ -19,8 +19,6 @@ their symbol tables and debug info.
 """
 
 import argparse
-import distutils
-from distutils import dir_util  # pylint: disable=unused-import
 from enum import Enum
 import os
 import pathlib
@@ -133,16 +131,83 @@ crash.sh -m $script_dir/usr/lib/debug/lib/modules \\
 """
 
 
+def get_module_paths(osrelease: str, path: str) -> List[str]:
+    """
+    Use drgn on the crash dump specified by `path` and return list
+    of paths from the `osrelease` kernel modules relevant to the
+    crash dump.
+    """
+    #
+    # Similarly to libkdumpfile we import these libraries locally
+    # here so people who don't have drgn can still use savedump
+    # for userland core dumps.
+    #
+    import drgn  # pylint: disable=import-outside-toplevel
+    from drgn.helpers.linux.list import list_for_each_entry  # pylint: disable=import-outside-toplevel
+
+    prog = drgn.program_from_core_dump(path)
+
+    #
+    # First go through all modules in the dump and create a map
+    # of [key: module name] -> (value: module srcversion).
+    #
+    # Note:
+    # It would be prefereable to be able to use the binary's
+    # .build-id to do the matching instead of srcversion.
+    # Unfortunately there doesn't seem to be a straightforward
+    # way to get the build-id section of the ELF files recorded
+    # in the dump. Hopefully that changes in the future.
+    #
+    mod_name_srcvers = {}
+    for mod in list_for_each_entry('struct module',
+                                   prog['modules'].address_of_(), 'list'):
+        mod_name_srcvers[str(mod.name.string_(),
+                             encoding='utf-8')] = str(mod.srcversion.string_(),
+                                                      encoding='utf-8')
+
+    #
+    # Go through all modules in /usr/lib/debug/lib/modules/<osrelease>
+    # and gather the file paths of the ones that are part of our
+    # module name-to-srcversion map.
+    #
+    system_modules = pathlib.Path(
+        f"/usr/lib/debug/lib/modules/{osrelease}/").rglob('*.ko')
+    mod_paths = []
+    for modpath in system_modules:
+        modname = os.path.basename(modpath)[:-3]
+        if not mod_name_srcvers.get(modname):
+            continue
+
+        success, output = shell_cmd(
+            ['modinfo', '--field=srcversion',
+             str(modpath)])
+        if not success:
+            sys.exit(output)
+        output = output.strip()
+
+        if output != mod_name_srcvers[modname]:
+            continue
+
+        mod_paths.append(str(modpath))
+        del mod_name_srcvers[modname]
+
+    print(f"found {len(mod_paths)} relevant modules with their debug info...")
+    print("warning: could not find the debug info of the following modules:")
+    print(f"  {', '.join(mod_name_srcvers.keys())}")
+    return mod_paths
+
+
 def archive_kernel_dump(path: str) -> None:
     """
     Packages the dump together with its vmlinux and modules in a
     gzipped archive in the working directory.
     """
+    # pylint: disable=too-many-locals
     #
-    # We import libkdumpfile specifically here and not
-    # in the top-level to allow users that don't have
+    # We import drgn and libkdumpfile specifically here and
+    # not in the top-level to allow users that don't have
     # it installed to still be able to use savedump for
-    # core files.
+    # userland core files.
     #
     import kdumpfile  # pylint: disable=import-outside-toplevel
 
@@ -156,18 +221,17 @@ def archive_kernel_dump(path: str) -> None:
         sys.exit(f"error: cannot find vmlinux at: {vmlinux_path}")
     print(f"vmlinux found: {vmlinux_path}")
 
-    extra_mod_path = f"/usr/lib/debug/lib/modules/{osrelease}/extra"
-    if not os.path.exists(extra_mod_path):
-        sys.exit(f"error: cannot find extra mod path: {extra_mod_path}")
-    print(f"using module path: {extra_mod_path}")
+    mod_paths = get_module_paths(osrelease, path)
 
     archive_dir = f"{nodename}.archive-{dumpname}"
     pathlib.Path(archive_dir).mkdir(parents=True, exist_ok=True)
     shutil.copy(path, archive_dir)
     shutil.copy(vmlinux_path, archive_dir)
 
-    archive_extra_mod_path = f"{archive_dir}{extra_mod_path}"
-    distutils.dir_util.copy_tree(extra_mod_path, archive_extra_mod_path)
+    for mod_path in mod_paths:
+        archive_mod_path = f"{archive_dir}{mod_path}"
+        os.makedirs(os.path.dirname(archive_mod_path), exist_ok=True)
+        shutil.copy(mod_path, archive_mod_path)
 
     #
     # Generate run-sdb.sh.
