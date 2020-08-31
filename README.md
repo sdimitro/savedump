@@ -1,8 +1,12 @@
 # savedump
 
-TL;DR; A Python hack I put together that does its best to archive
-crash dumps and core dumps together with their required binaries
-and debug info in Linux.
+![](https://github.com/sdimitro/savedump/workflows/.github/workflows/main.yml/badge.svg)
+
+TL;DR; A Python script that creates a best-effort self-contained
+archive of a kernel crash dump or userland core dump. The archive
+contains the memory dump coupled together with any required
+binaries and debug information that it could find at the time it
+was invoked.
 
 ### Motivation
 
@@ -34,6 +38,26 @@ it is expected to have many configuration switches for generating
 dumps. What it does lack though is proper tooling to capture a
 self-contained dump from one system to analyze it in another.
 This is what this utility is attempting to help with.
+
+### Installation
+
+Ensure you have the following dependencies:
+* Python 3.6 or newer
+* [libkdumpfile](https://github.com/ptesarik/libkdumpfile)
+* [drgn](https://github.com/osandov/drgn/)
+* [gdb](https://www.gnu.org/software/gdb/)
+
+Note that `libkdumpfile` and `drgn` are only needed for kernel
+crash dumps. If you only need `savedump` for userland core dumps
+then you only need `python3`. `gdb` is not a hard dependency
+either but it is recommeneded for accurate archival of shared
+objects in userland core dumps.
+
+Once all dependencies are installed clone this repo and
+run the following command from the root of the repo:
+```
+sudo python3 setup.py install
+```
 
 ### How do I use it?
 
