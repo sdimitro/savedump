@@ -1,6 +1,6 @@
 # savedump
 
-![](https://github.com/sdimitro/savedump/workflows/.github/workflows/main.yml/badge.svg)
+![](https://github.com/delphix/savedump/workflows/.github/workflows/main.yml/badge.svg)
 
 TL;DR; A Python script that creates a best-effort self-contained
 archive of a kernel crash dump or userland core dump. The archive
