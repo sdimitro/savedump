@@ -7,10 +7,12 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.DEVOPS_AUTOMATION_TOKEN }}
       - uses: delphix/actions/sync-with-upstream@master
         with:
           upstream-repository: https://github.com/sdimitro/savedump.git
           upstream-branch: master
           downstream-branch: master
         env:
-          GITHUB_TOKEN: ${{ secrets.DEVOPS_AUTOMATION_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
