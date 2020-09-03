@@ -123,9 +123,7 @@ As mentioned in the TL;DR; the utility is far from perfect but I do
 hope to add more functionality to it as cases arise.
 
 * [verify BuildID and/or SRCVERSION between dumps and binaries](https://github.com/sdimitro/savedump/issues/6)
-* [only package the modules needed in crash dumps](https://github.com/sdimitro/savedump/issues/7)
 * [make the gdb dependency optional](https://github.com/sdimitro/savedump/issues/9)
-* [make the libkdumpfile dependency optional](https://github.com/sdimitro/savedump/issues/8)
 * [support custom paths for binaries and debug info](https://github.com/sdimitro/savedump/issues/5)
 * [generate run-sdb.sh](https://github.com/sdimitro/savedump/issues/10)
 * [support for plain vmcores](https://github.com/sdimitro/savedump/issues/3)
