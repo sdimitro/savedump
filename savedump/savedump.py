@@ -39,18 +39,18 @@ def shell_cmd(cmd_and_args: List[str]) -> Tuple[bool, str]:
     if not shutil.which(cmd):
         return False, f"could not find program: {cmd}"
 
-    proc = subprocess.Popen(cmd_and_args,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-    out, err = proc.communicate()
-    retcode = proc.wait()
-    if retcode != 0:
-        return False, f"{cmd} exited with code: {retcode} - msg: {str(err)}"
-    if err:
-        print(f"{cmd} stderr start ---")
-        print(f"{str(err, 'utf-8')}")
-        print(f"{cmd} stderr end   ---")
-    return True, str(out, 'utf-8')
+    with subprocess.Popen(cmd_and_args,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE) as proc:
+        out, err = proc.communicate()
+        retcode = proc.wait()
+        if retcode != 0:
+            return False, f"{cmd} exited with code: {retcode} - msg: {str(err)}"
+        if err:
+            print(f"{cmd} stderr start ---")
+            print(f"{str(err, 'utf-8')}")
+            print(f"{cmd} stderr end   ---")
+        return True, str(out, 'utf-8')
 
 
 def copy_from_root(src: str, dest: str) -> None:
@@ -237,7 +237,7 @@ def archive_kernel_dump(path: str) -> None:
     # Generate run-sdb.sh.
     #
     run_sdb_path = f"{archive_dir}/run-sdb.sh"
-    with open(run_sdb_path, "w") as sdb_script:
+    with open(run_sdb_path, "w", encoding="utf-8") as sdb_script:
         print(RUN_CRASH_SDB_CONTENTS.format(os.path.basename(vmlinux_path),
                                             dumpname),
               file=sdb_script)
@@ -247,7 +247,7 @@ def archive_kernel_dump(path: str) -> None:
     # Generate run-pycrash.sh.
     #
     run_pycrash_path = f"{archive_dir}/run-pycrash.sh"
-    with open(run_pycrash_path, "w") as pycrash_script:
+    with open(run_pycrash_path, "w", encoding="utf-8") as pycrash_script:
         print(RUN_PYCRASH_CONTENTS.format(os.path.basename(vmlinux_path),
                                           dumpname),
               file=pycrash_script)
@@ -535,7 +535,7 @@ def archive_userland_core_dump(path: str) -> None:
     # Generate run-gdb.sh.
     #
     run_gdb_path = f"{archive_dir}/run-gdb.sh"
-    with open(run_gdb_path, "w") as gdb_script:
+    with open(run_gdb_path, "w", encoding="utf-8") as gdb_script:
         print(RUN_GDB_CONTENTS.format(bin_path, dumpname), file=gdb_script)
     os.chmod(run_gdb_path, 0o755)
 
