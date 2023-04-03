@@ -422,7 +422,7 @@ def binary_includes_debug_info(path: str) -> Optional[bool]:
         if '.debug_str' in line:
             debug_str = True
         if debug_info and debug_str:
-            return False
+            return True
     return False
 
 
